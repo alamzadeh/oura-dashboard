@@ -89,7 +89,10 @@ for k, v in {"sleep_goal_h": 8.0, "steps_goal": 10000, "cal_goal": 500, "editing
              "active_card": None}.items():
     if k not in st.session_state: st.session_state[k] = v
 
-saved_token = st.secrets.get("oura_token", "") if hasattr(st, "secrets") else ""
+try:
+    saved_token = st.secrets["oura_token"]
+except:
+    saved_token = ""
 with st.sidebar:
     st.markdown(f"<p style='font-size:10px;letter-spacing:2px;color:{MUTED};text-transform:uppercase;'>Settings</p>", unsafe_allow_html=True)
     token = saved_token if saved_token else st.text_input("Personal Access Token", type="password")
