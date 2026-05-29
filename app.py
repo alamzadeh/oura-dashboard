@@ -308,27 +308,29 @@ def build_cards(active,cards):
     for key,label,value,motiv,color in cards:
         is_act=active==key
         left=f"border-left:3px solid {color};" if is_act else "border-left:3px solid transparent;"
-        shad="box-shadow:0 6px 24px rgba(0,0,0,0.1);" if is_act else "box-shadow:0 2px 8px rgba(0,0,0,0.05);"
+        shad="box-shadow:0 6px 20px rgba(0,0,0,0.1);" if is_act else "box-shadow:0 1px 6px rgba(0,0,0,0.05);"
+        # Short 1-2 word status for compact card
+        short=motiv.split(".")[0] if motiv and motiv!="No data yet" else motiv
         items+=f"""
 <div onclick="sel('{key}')"
      style="background:rgba(239,235,229,0.9);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
-            border:1px solid rgba(201,196,187,0.5);{left}border-radius:14px;
-            padding:16px 14px 13px;cursor:pointer;{shad}transition:all .2s;
-            box-sizing:border-box;">
-  <p style="font-family:'DM Sans',sans-serif;font-size:8px;letter-spacing:2px;color:{MUTED};
-            text-transform:uppercase;margin:0 0 8px;font-weight:500;">{label}</p>
-  <p style="font-family:'DM Sans',sans-serif;font-size:24px;font-weight:700;
-            color:{color};margin:0;line-height:1;">{value}</p>
-  <p style="font-family:'DM Sans',sans-serif;font-size:10px;color:{MUTED};
-            margin:5px 0 0;line-height:1.4;">{motiv}</p>
+            border:1px solid rgba(201,196,187,0.5);{left}border-radius:12px;
+            padding:12px 10px 10px;cursor:pointer;{shad}transition:all .2s;
+            box-sizing:border-box;display:flex;flex-direction:column;gap:4px;">
+  <p style="font-family:'DM Sans',sans-serif;font-size:7px;letter-spacing:1.5px;color:{MUTED};
+            text-transform:uppercase;margin:0;font-weight:600;white-space:nowrap;
+            overflow:hidden;text-overflow:ellipsis;">{label}</p>
+  <p style="font-family:'DM Sans',sans-serif;font-size:20px;font-weight:700;
+            color:{color};margin:0;line-height:1.1;">{value}</p>
+  <p style="font-family:'DM Sans',sans-serif;font-size:9px;color:{MUTED};
+            margin:0;line-height:1.3;overflow:hidden;
+            display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">{short}</p>
 </div>"""
-
     return f"""
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@500;700&display=swap" rel="stylesheet">
 <style>
-  body{{background:transparent!important;margin:0;padding:0;}}
-  .grid{{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;width:100%;box-sizing:border-box;}}
-  @media(max-width:600px){{.grid{{grid-template-columns:repeat(2,1fr)!important;}}}}
+  body{{background:transparent!important;margin:0;padding:0;overflow:hidden;}}
+  .grid{{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;width:100%;box-sizing:border-box;}}
 </style>
 <div class="grid">{items}</div>
 <script>
@@ -360,14 +362,18 @@ def legend_row(label,color,value_str,pct_val,goal_key,min_v,max_v,step):
         mc,sc2,pc,dc=st.columns([1,9,1,1])
         with mc:
             if st.button("−",key=f"m_{goal_key}",type="primary"):
-                st.session_state[goal_key]=max(float(min_v),round(st.session_state[goal_key]-step,2)); st.rerun()
+                cur=float(st.session_state[goal_key])
+                st.session_state[goal_key]=max(float(min_v),round(cur-float(step),4))
+                st.rerun()
         with sc2:
-            v=st.slider("",float(min_v),float(max_v),float(st.session_state[goal_key]),float(step),
-                        key=f"sl_{goal_key}",label_visibility="collapsed")
-            st.session_state[goal_key]=v
+            # key=goal_key so slider and session_state share the same value
+            st.slider("",float(min_v),float(max_v),step=float(step),
+                      key=goal_key,label_visibility="collapsed")
         with pc:
             if st.button("+",key=f"p_{goal_key}",type="primary"):
-                st.session_state[goal_key]=min(float(max_v),round(st.session_state[goal_key]+step,2)); st.rerun()
+                cur=float(st.session_state[goal_key])
+                st.session_state[goal_key]=min(float(max_v),round(cur+float(step),4))
+                st.rerun()
         with dc:
             if st.button("✓",key=f"ok_{goal_key}",type="primary"):
                 st.session_state.editing=None; st.rerun()
@@ -387,7 +393,7 @@ CARDS=[
     ("hr","Heart Rate",f"{rhr} bpm" if rhr else "—",hr_motiv(rhr),"#1C1917"),
     ("activity","Activity",f"{int(steps):,}" if steps else "—",act_motiv(steps,stg),TAN),
 ]
-components.html(build_cards(active,CARDS),height=460)
+components.html(build_cards(active,CARDS),height=130)
 
 # Text summary panel
 if active:
