@@ -9,97 +9,69 @@ from datetime import datetime, timedelta
 
 st.set_page_config(page_title="Ali's Ring", layout="wide", initial_sidebar_state="collapsed")
 
-# ── PWA injection ──────────────────────────────────────────────────────────────
+# ── PWA + local date injection ─────────────────────────────────────────────────
 components.html("""
 <script>
 (function() {
   try {
     var p = window.parent.document;
 
-    // Remove ALL existing Streamlit icons
-    p.querySelectorAll('link[rel*="icon"], link[rel="apple-touch-icon"]')
-     .forEach(function(el) { el.parentNode && el.parentNode.removeChild(el); });
-
-    // iOS / Android meta tags
-    if (!p.querySelector('meta[name="apple-mobile-web-app-capable"]')) {
-      [
-        ['apple-mobile-web-app-capable',        'yes'],
-        ['apple-mobile-web-app-status-bar-style','default'],
-        ['apple-mobile-web-app-title',           "Ali's Ring"],
-        ['theme-color',                          '#E8E4DC'],
-        ['mobile-web-app-capable',               'yes']
-      ].forEach(function(t) {
-        var m = p.createElement('meta');
-        m.name = t[0]; m.content = t[1];
-        p.head.appendChild(m);
-      });
+    // ── Fix local date ─────────────────────────────────────────────────────────
+    var url = new URL(window.parent.location.href);
+    var d   = new Date();
+    var local = d.getFullYear() + '-' +
+                String(d.getMonth()+1).padStart(2,'0') + '-' +
+                String(d.getDate()).padStart(2,'0');
+    if (url.searchParams.get('ld') !== local) {
+      // preserve existing card param if set
+      var card = url.searchParams.get('card') || '';
+      url.searchParams.set('ld', local);
+      if (card) url.searchParams.set('card', card);
+      else url.searchParams.delete('card');
+      window.parent.location.replace(url.toString());
+      return;
     }
 
-    // Generate icon on canvas (add to body briefly so iOS can read it)
-    var c = document.createElement('canvas');
-    c.width = c.height = 512;
-    document.body.appendChild(c);
-    var ctx = c.getContext('2d');
+    // ── PWA meta tags ──────────────────────────────────────────────────────────
+    if (p.querySelector('meta[name="apple-mobile-web-app-capable"]')) return;
+    [
+      ['apple-mobile-web-app-capable',        'yes'],
+      ['apple-mobile-web-app-status-bar-style','default'],
+      ['apple-mobile-web-app-title',           "Ali's Ring"],
+      ['theme-color',                          '#E8E4DC'],
+      ['mobile-web-app-capable',               'yes']
+    ].forEach(function(t) {
+      var m = p.createElement('meta');
+      m.name = t[0]; m.content = t[1];
+      p.head.appendChild(m);
+    });
 
-    // Cream background
-    ctx.fillStyle = '#E8E4DC';
-    ctx.fillRect(0, 0, 512, 512);
+    // ── Icon (served as static file) ───────────────────────────────────────────
+    var iconUrl = window.parent.location.origin +
+                  window.parent.location.pathname.replace(/\/?$/, '/') +
+                  'app/static/apple-touch-icon.png';
 
-    var cx = 256, cy = 256;
-
-    function ring(r, endFrac, color, lw) {
-      // dim background ring
-      ctx.beginPath();
-      ctx.arc(cx, cy, r, -Math.PI/2, 1.5 * Math.PI);
-      ctx.strokeStyle = '#D4CFC8';
-      ctx.lineWidth = lw;
-      ctx.stroke();
-      // lit arc
-      if (endFrac > 0) {
-        ctx.beginPath();
-        ctx.arc(cx, cy, r, -Math.PI/2, (endFrac * 2 - 0.5) * Math.PI);
-        ctx.strokeStyle = color;
-        ctx.lineWidth = lw;
-        ctx.lineCap = 'round';
-        ctx.stroke();
-      }
-    }
-
-    ring(195, 0.88, '#C8611A', 36);
-    ring(145, 0.90, '#4A4540', 30);
-    ring( 95, 0.85, '#8B7355', 24);
-
-    ctx.fillStyle = '#1C1917';
-    ctx.font = '700 90px -apple-system, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('AR', cx, cy);
-
-    var icon = c.toDataURL('image/png');
-    document.body.removeChild(c);
-
-    // Apple touch icon (iOS home screen)
-    ['apple-touch-icon','icon'].forEach(function(rel) {
+    p.querySelectorAll('link[rel*="icon"]').forEach(function(el) {
+      el.parentNode && el.parentNode.removeChild(el);
+    });
+    ['apple-touch-icon','shortcut icon','icon'].forEach(function(rel) {
       var l = p.createElement('link');
-      l.rel = rel; l.type = 'image/png';
-      l.sizes = '512x512'; l.href = icon;
+      l.rel = rel; l.href = iconUrl;
       p.head.appendChild(l);
     });
 
-    // Manifest (Android Chrome install prompt)
+    // ── Manifest ───────────────────────────────────────────────────────────────
     var mfst = {
       name: "Ali's Ring", short_name: "Ali's Ring",
-      description: "Personal Oura health dashboard",
-      start_url: window.parent.location.pathname,
       display: "standalone", orientation: "portrait-primary",
       background_color: "#E8E4DC", theme_color: "#E8E4DC",
-      icons: [{src: icon, sizes: "512x512", type: "image/png", purpose: "any maskable"}]
+      start_url: window.parent.location.pathname,
+      icons: [{src: iconUrl, sizes: "512x512", type: "image/png", purpose: "any maskable"}]
     };
     var ml = p.createElement('link');
     ml.rel = 'manifest';
     ml.href = URL.createObjectURL(new Blob([JSON.stringify(mfst)], {type:'application/manifest+json'}));
     p.head.appendChild(ml);
-
     p.title = "Ali's Ring";
 
   } catch(e) { console.log('PWA:', e); }
@@ -198,7 +170,13 @@ if not token:
     st.info("Enter your token in the sidebar or save to `.streamlit/secrets.toml`")
     st.stop()
 
-end_date   = datetime.now().date()
+end_date   = datetime.now().date()  # fallback
+ld_str = st.query_params.get("ld", "")
+if ld_str:
+    try:
+        end_date = datetime.strptime(ld_str, "%Y-%m-%d").date()
+    except Exception:
+        pass
 start_date = end_date - timedelta(days=days)
 active     = st.session_state.active_card
 
