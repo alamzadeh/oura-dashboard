@@ -15,90 +15,94 @@ components.html("""
 (function() {
   try {
     var p = window.parent.document;
-    if (p.querySelector('meta[name="apple-mobile-web-app-capable"]')) return;
+
+    // Remove ALL existing Streamlit icons
+    p.querySelectorAll('link[rel*="icon"], link[rel="apple-touch-icon"]')
+     .forEach(function(el) { el.parentNode && el.parentNode.removeChild(el); });
 
     // iOS / Android meta tags
-    [
-      ['apple-mobile-web-app-capable',        'yes'],
-      ['apple-mobile-web-app-status-bar-style','default'],
-      ['apple-mobile-web-app-title',           "Ali's Ring"],
-      ['theme-color',                          '#E8E4DC'],
-      ['mobile-web-app-capable',               'yes']
-    ].forEach(function(t) {
-      var m = p.createElement('meta');
-      m.name = t[0]; m.content = t[1];
-      p.head.appendChild(m);
-    });
+    if (!p.querySelector('meta[name="apple-mobile-web-app-capable"]')) {
+      [
+        ['apple-mobile-web-app-capable',        'yes'],
+        ['apple-mobile-web-app-status-bar-style','default'],
+        ['apple-mobile-web-app-title',           "Ali's Ring"],
+        ['theme-color',                          '#E8E4DC'],
+        ['mobile-web-app-capable',               'yes']
+      ].forEach(function(t) {
+        var m = p.createElement('meta');
+        m.name = t[0]; m.content = t[1];
+        p.head.appendChild(m);
+      });
+    }
 
-    // Generate Braun-style app icon on canvas
-    var c = p.createElement('canvas');
+    // Generate icon on canvas (add to body briefly so iOS can read it)
+    var c = document.createElement('canvas');
     c.width = c.height = 512;
+    document.body.appendChild(c);
     var ctx = c.getContext('2d');
 
     // Cream background
     ctx.fillStyle = '#E8E4DC';
     ctx.fillRect(0, 0, 512, 512);
 
-    // Draw the 3 rings (same as the app)
-    function arc(r, start, end, color, lw) {
-      ctx.beginPath();
-      ctx.arc(256, 256, r, start * Math.PI - Math.PI/2, end * Math.PI - Math.PI/2);
-      ctx.strokeStyle = color;
-      ctx.lineWidth = lw;
-      ctx.lineCap = 'butt';
-      ctx.stroke();
-    }
-    // Background (dim) rings
-    arc(195, 0, 2, '#D4CFC8', 34);
-    arc(145, 0, 2, '#D4CFC8', 28);
-    arc( 95, 0, 2, '#D4CFC8', 22);
-    // Lit rings (sleep 88%, steps 90%, calories 85%)
-    arc(195, 0, 1.76, '#C8611A', 34);
-    arc(145, 0, 1.80, '#4A4540', 28);
-    arc( 95, 0, 1.70, '#8B7355', 22);
+    var cx = 256, cy = 256;
 
-    // "AR" text center
+    function ring(r, endFrac, color, lw) {
+      // dim background ring
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, -Math.PI/2, 1.5 * Math.PI);
+      ctx.strokeStyle = '#D4CFC8';
+      ctx.lineWidth = lw;
+      ctx.stroke();
+      // lit arc
+      if (endFrac > 0) {
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, -Math.PI/2, (endFrac * 2 - 0.5) * Math.PI);
+        ctx.strokeStyle = color;
+        ctx.lineWidth = lw;
+        ctx.lineCap = 'round';
+        ctx.stroke();
+      }
+    }
+
+    ring(195, 0.88, '#C8611A', 36);
+    ring(145, 0.90, '#4A4540', 30);
+    ring( 95, 0.85, '#8B7355', 24);
+
     ctx.fillStyle = '#1C1917';
-    ctx.font = '700 88px DM Sans, sans-serif';
+    ctx.font = '700 90px -apple-system, sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText('AR', 256, 256);
+    ctx.fillText('AR', cx, cy);
 
     var icon = c.toDataURL('image/png');
+    document.body.removeChild(c);
 
-    // Apple touch icon
-    var il = p.createElement('link');
-    il.rel = 'apple-touch-icon'; il.sizes = '512x512'; il.href = icon;
-    p.head.appendChild(il);
+    // Apple touch icon (iOS home screen)
+    ['apple-touch-icon','icon'].forEach(function(rel) {
+      var l = p.createElement('link');
+      l.rel = rel; l.type = 'image/png';
+      l.sizes = '512x512'; l.href = icon;
+      p.head.appendChild(l);
+    });
 
-    // Shortcut icon
-    var fl = p.createElement('link');
-    fl.rel = 'icon'; fl.type = 'image/png'; fl.href = icon;
-    p.head.appendChild(fl);
-
-    // Web app manifest (for Android Chrome install prompt)
-    var manifest = {
-      name: "Ali's Ring",
-      short_name: "Ali's Ring",
+    // Manifest (Android Chrome install prompt)
+    var mfst = {
+      name: "Ali's Ring", short_name: "Ali's Ring",
       description: "Personal Oura health dashboard",
       start_url: window.parent.location.pathname,
-      scope: window.parent.location.pathname,
-      display: "standalone",
-      orientation: "portrait-primary",
-      background_color: "#E8E4DC",
-      theme_color: "#E8E4DC",
-      icons: [
-        {src: icon, sizes: "512x512", type: "image/png", purpose: "any maskable"}
-      ]
+      display: "standalone", orientation: "portrait-primary",
+      background_color: "#E8E4DC", theme_color: "#E8E4DC",
+      icons: [{src: icon, sizes: "512x512", type: "image/png", purpose: "any maskable"}]
     };
-    var mb = new Blob([JSON.stringify(manifest)], {type:'application/manifest+json'});
     var ml = p.createElement('link');
-    ml.rel = 'manifest'; ml.href = URL.createObjectURL(mb);
+    ml.rel = 'manifest';
+    ml.href = URL.createObjectURL(new Blob([JSON.stringify(mfst)], {type:'application/manifest+json'}));
     p.head.appendChild(ml);
 
     p.title = "Ali's Ring";
 
-  } catch(e) { console.log('PWA init:', e); }
+  } catch(e) { console.log('PWA:', e); }
 })();
 </script>
 """, height=0)
