@@ -6,8 +6,16 @@ import plotly.express as px
 import plotly.graph_objects as go
 import streamlit.components.v1 as components
 from datetime import datetime, timedelta
+from PIL import Image
 
-st.set_page_config(page_title="Ali's Ring", layout="wide", initial_sidebar_state="collapsed")
+# Load icon for page_icon (this goes into HTML head at load time — iOS reads it)
+try:
+    _app_icon = Image.open("static/apple-touch-icon.png")
+except Exception:
+    _app_icon = "🔴"
+
+st.set_page_config(page_title="Ali's Ring", page_icon=_app_icon,
+                   layout="wide", initial_sidebar_state="collapsed")
 
 # ── PWA + local date injection ─────────────────────────────────────────────────
 components.html("""
