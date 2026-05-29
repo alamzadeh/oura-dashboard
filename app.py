@@ -9,6 +9,100 @@ from datetime import datetime, timedelta
 
 st.set_page_config(page_title="Ali's Ring", layout="wide", initial_sidebar_state="collapsed")
 
+# ── PWA injection ──────────────────────────────────────────────────────────────
+components.html("""
+<script>
+(function() {
+  try {
+    var p = window.parent.document;
+    if (p.querySelector('meta[name="apple-mobile-web-app-capable"]')) return;
+
+    // iOS / Android meta tags
+    [
+      ['apple-mobile-web-app-capable',        'yes'],
+      ['apple-mobile-web-app-status-bar-style','default'],
+      ['apple-mobile-web-app-title',           "Ali's Ring"],
+      ['theme-color',                          '#E8E4DC'],
+      ['mobile-web-app-capable',               'yes']
+    ].forEach(function(t) {
+      var m = p.createElement('meta');
+      m.name = t[0]; m.content = t[1];
+      p.head.appendChild(m);
+    });
+
+    // Generate Braun-style app icon on canvas
+    var c = p.createElement('canvas');
+    c.width = c.height = 512;
+    var ctx = c.getContext('2d');
+
+    // Cream background
+    ctx.fillStyle = '#E8E4DC';
+    ctx.fillRect(0, 0, 512, 512);
+
+    // Draw the 3 rings (same as the app)
+    function arc(r, start, end, color, lw) {
+      ctx.beginPath();
+      ctx.arc(256, 256, r, start * Math.PI - Math.PI/2, end * Math.PI - Math.PI/2);
+      ctx.strokeStyle = color;
+      ctx.lineWidth = lw;
+      ctx.lineCap = 'butt';
+      ctx.stroke();
+    }
+    // Background (dim) rings
+    arc(195, 0, 2, '#D4CFC8', 34);
+    arc(145, 0, 2, '#D4CFC8', 28);
+    arc( 95, 0, 2, '#D4CFC8', 22);
+    // Lit rings (sleep 88%, steps 90%, calories 85%)
+    arc(195, 0, 1.76, '#C8611A', 34);
+    arc(145, 0, 1.80, '#4A4540', 28);
+    arc( 95, 0, 1.70, '#8B7355', 22);
+
+    // "AR" text center
+    ctx.fillStyle = '#1C1917';
+    ctx.font = '700 88px DM Sans, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('AR', 256, 256);
+
+    var icon = c.toDataURL('image/png');
+
+    // Apple touch icon
+    var il = p.createElement('link');
+    il.rel = 'apple-touch-icon'; il.sizes = '512x512'; il.href = icon;
+    p.head.appendChild(il);
+
+    // Shortcut icon
+    var fl = p.createElement('link');
+    fl.rel = 'icon'; fl.type = 'image/png'; fl.href = icon;
+    p.head.appendChild(fl);
+
+    // Web app manifest (for Android Chrome install prompt)
+    var manifest = {
+      name: "Ali's Ring",
+      short_name: "Ali's Ring",
+      description: "Personal Oura health dashboard",
+      start_url: window.parent.location.pathname,
+      scope: window.parent.location.pathname,
+      display: "standalone",
+      orientation: "portrait-primary",
+      background_color: "#E8E4DC",
+      theme_color: "#E8E4DC",
+      icons: [
+        {src: icon, sizes: "512x512", type: "image/png", purpose: "any maskable"}
+      ]
+    };
+    var mb = new Blob([JSON.stringify(manifest)], {type:'application/manifest+json'});
+    var ml = p.createElement('link');
+    ml.rel = 'manifest'; ml.href = URL.createObjectURL(mb);
+    p.head.appendChild(ml);
+
+    p.title = "Ali's Ring";
+
+  } catch(e) { console.log('PWA init:', e); }
+})();
+</script>
+""", height=0)
+
 # ── Braun / Dieter Rams palette ────────────────────────────────────────────────
 BG     = "#E8E4DC"
 SURF   = "#EFEBE5"
