@@ -89,10 +89,7 @@ for k, v in {"sleep_goal_h": 8.0, "steps_goal": 10000, "cal_goal": 500, "editing
              "active_card": None}.items():
     if k not in st.session_state: st.session_state[k] = v
 
-try:
-    saved_token = st.secrets["oura_token"]
-except:
-    saved_token = ""
+saved_token = st.secrets.get("oura_token", "") if hasattr(st, "secrets") else ""
 with st.sidebar:
     st.markdown(f"<p style='font-size:10px;letter-spacing:2px;color:{MUTED};text-transform:uppercase;'>Settings</p>", unsafe_allow_html=True)
     token = saved_token if saved_token else st.text_input("Personal Access Token", type="password")
@@ -167,7 +164,11 @@ ready_sc   = lat(ready_df, "score", 0)
 resp       = lat(det_df,   "average_breath", 0)
 rhr_col    = next((c for c in ready_df.columns if "resting_heart_rate" in c.lower()), None)
 rhr        = int(lat(ready_df, rhr_col, 0)) if rhr_col else None
-cur_hr     = int(hr_df["bpm"].dropna().iloc[-1]) if not hr_df.empty and "bpm" in hr_df.columns else None
+try:
+    bpm_series = hr_df["bpm"].dropna() if not hr_df.empty and "bpm" in hr_df.columns else pd.Series(dtype=float)
+    cur_hr = int(bpm_series.iloc[-1]) if not bpm_series.empty else None
+except Exception:
+    cur_hr = None
 center_hr  = cur_hr or rhr
 
 SM = {"restored":("Restored",ACCENT), "normal":("Balanced",DARK),
@@ -348,7 +349,7 @@ st.markdown(f"""
 # Rings
 components.html(
     build_rings(sleep_h, sg, steps, stg, cals, cg, center_hr),
-    height=330,
+    height=360,
 )
 
 # Legend
@@ -370,7 +371,7 @@ CARDS = [
     ("hrv",       "HRV",          f"{int(hrv)}ms" if hrv else "—",             f"{'↑' if hrv>=hrv_avg else '↓'} {int(hrv_avg)}ms avg" if hrv_avg else "—", DARK),
     ("activity",  "Activity",     f"{int(steps):,}" if steps else "—",         f"of {int(stg):,} steps", TAN),
 ]
-components.html(build_cards(active, CARDS), height=130)
+components.html(build_cards(active, CARDS), height=420)
 
 # ── Detail panels ──────────────────────────────────────────────────────────────
 if active:
@@ -405,14 +406,20 @@ if active:
                 c2.plotly_chart(cbar(stress_df,"day","recovery_high","#3D6B3A","High Recovery (min)"), use_container_width=True)
 
     elif active == "hr":
-        if not hr_df.empty and "bpm" in hr_df.columns:
-            fig = cline(hr_df,"timestamp","bpm",ACCENT,"Heart Rate Today")
-            fig.update_traces(fill="tozeroy", fillcolor=f"{ACCENT}12")
-            c1.plotly_chart(fig, use_container_width=True)
-        else:
+        try:
+            if not hr_df.empty and "bpm" in hr_df.columns and not hr_df["bpm"].dropna().empty:
+                fig = cline(hr_df,"timestamp","bpm",ACCENT,"Heart Rate Today")
+                fig.update_traces(fill="tozeroy", fillcolor=f"{ACCENT}12")
+                c1.plotly_chart(fig, use_container_width=True)
+            else:
+                c1.info("No intraday HR yet — ring syncs every few hours.")
+        except Exception:
             c1.info("No intraday HR yet — ring syncs every few hours.")
-        if rhr_col and not ready_df.empty:
-            c2.plotly_chart(cline(ready_df,"day",rhr_col,DARK,"Resting HR Trend"), use_container_width=True)
+        try:
+            if rhr_col and not ready_df.empty and not ready_df[rhr_col].dropna().empty:
+                c2.plotly_chart(cline(ready_df,"day",rhr_col,DARK,"Resting HR Trend"), use_container_width=True)
+        except Exception:
+            pass
 
     elif active == "hrv":
         if "average_hrv" in det_df.columns:
