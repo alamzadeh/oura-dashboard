@@ -1,0 +1,19 @@
+{
+  "name": "Ali's Ring",
+  "short_name": "Ali's Ring",
+  "description": "Personal Oura health dashboard",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#E8E4DC",
+  "theme_color": "#E8E4DC",
+  "start_url": ".",
+  "scope": ".",
+  "icons": [
+    {
+      "src": "apple-touch-icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

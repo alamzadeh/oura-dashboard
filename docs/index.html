@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+
+  <!-- iOS PWA -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Ali's Ring">
+
+  <!-- Android PWA -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#E8E4DC">
+
+  <title>Ali's Ring</title>
+
+  <!-- Icon — this is what iOS uses for the home screen -->
+  <link rel="apple-touch-icon" sizes="512x512" href="apple-touch-icon.png">
+  <link rel="icon" type="image/png" href="apple-touch-icon.png">
+  <link rel="manifest" href="manifest.json">
+
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      height: 100%;
+      width: 100%;
+      overflow: hidden;
+      background: #E8E4DC;
+    }
+    iframe {
+      border: none;
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+    /* Loading screen */
+    #loader {
+      position: fixed;
+      inset: 0;
+      background: #E8E4DC;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      z-index: 10;
+    }
+    #loader img {
+      width: 96px;
+      height: 96px;
+      border-radius: 22px;
+    }
+    #loader p {
+      font-family: -apple-system, sans-serif;
+      font-size: 14px;
+      color: #6B6558;
+      letter-spacing: 1px;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="loader">
+    <img src="apple-touch-icon.png" alt="Ali's Ring">
+    <p>LOADING</p>
+  </div>
+
+  <iframe
+    id="app"
+    src="https://8dywb7eqrlihtfzjqyps3b.streamlit.app"
+    allow="fullscreen"
+    onload="document.getElementById('loader').style.display='none'">
+  </iframe>
+
+</body>
+</html>
